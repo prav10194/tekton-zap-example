@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: heroku-task-ref
+spec:
+  workspaces:
+    - name: task-ws
+      description: The folder where we write the message to
+  params:
+    - name: heroku-details
+      description: name of secret containing heroku creds
+      default: heroku-details
+  steps:
+    - name: configure-website
+      image: pranavbhatia/heroku:0.3
+      securityContext:
+        runAsUser: 0
+      command: ["/bin/sh"]
+      args:
+        - -c
+        - |
+            echo "Configuring heroku"
+            cat > ~/.netrc << EOF
+            machine api.heroku.com
+                login $HEROKU_EMAIL
+                password $HEROKU_API_KEY
+            machine git.heroku.com
+                login $HEROKU_EMAIL
+                password $HEROKU_API_KEY
+            EOF
+      envFrom:
+        - secretRef:
+            name: $(params.heroku-details)
+    - name: create-web-app
+      image: pranavbhatia/heroku:0.3
+      command: ["/bin/bash"]
+      args:
+        - -c
+        - |
+            cat ~/.netrc
+            git clone https://github.com/prav10194/kubernetes-jenkins && \
+            ls -la ./
+            cd kubernetes-jenkins/heroku-flask && \
+            cat $(workspaces.task-ws.path)/testreport.html > ./app/templates/index.html && \
+            git config --global user.email "user.name@example.com" && \
+            git config --global user.name "User Name" && \
+            git init && git add . && git commit -m "Adding files" && \
+            heroku create && \
+            git push heroku master && heroku ps:scale web=1
+            echo $(heroku apps:info -s  | grep web_url | cut -d= -f2 | grep https)
+    

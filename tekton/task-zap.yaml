@@ -1,0 +1,29 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: zap-task-ref
+spec:
+  volumes:
+    - name: report-volume
+      emptyDir: {}
+  workspaces:
+    - name: task-ws
+      description: Workspace to store your zap report
+  steps:
+    - name: scan-website
+      image: owasp/zap2docker-stable
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /zap/wrk/
+          name: report-volume
+      command: ["/bin/sh"]
+      args:
+        - -c
+        - |
+            echo "Running a zap scan"
+            zap-baseline.py -t http://example.com/ -r testreport.html
+            cat /zap/wrk/testreport.html > $(workspaces.task-ws.path)/testreport.html
+            ls -la $(workspaces.task-ws.path)
+            echo "Task completed"
+  

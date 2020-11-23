@@ -1,0 +1,22 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: zap-pipeline-ref
+spec:
+  workspaces:
+    - name: pipeline-ws
+  tasks:
+  - name: zap-task
+    taskRef:
+      name: zap-task-ref
+    workspaces:
+      - name: task-ws
+        workspace: pipeline-ws
+  - name: heroku-task
+    taskRef:
+        name: heroku-task-ref
+    workspaces:
+        - name: task-ws
+          workspace: pipeline-ws
+    runAfter: 
+        - zap-task
